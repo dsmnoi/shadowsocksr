@@ -1,31 +1,25 @@
-FROM alpine:3.6
+FROM alpine:3.9
+MAINTAINER FAN VINGA<fanalcest@gmail.com>
 
-ENV SERVER_ADDR     0.0.0.0
-ENV SERVER_PORT     51348
-ENV PASSWORD        psw
-ENV METHOD          aes-128-ctr
-ENV PROTOCOL        auth_aes128_md5
-ENV PROTOCOLPARAM   32
-ENV OBFS            tls1.2_ticket_auth_compatible
-ENV TIMEOUT         300
-ENV DNS_ADDR        8.8.8.8
-ENV DNS_ADDR_2      8.8.4.4
+ENV DNS_1=1.0.0.1                 \
+    DNS_2=8.8.8.8                 \
+    API_INTERFACE=legendsockssr   \
+    MYSQL_HOST=127.0.0.1          \
+    MYSQL_PORT=3306               \
+    MYSQL_USER=ss                 \
+    MYSQL_PASS=ss                 \
+    MYSQL_DB=shadowsocks          \
+    REDIRECT=github.com           \
+    FAST_OPEN=false
 
-ARG BRANCH=manyuser
-ARG WORK=~
+COPY . /root/shadowsocks
+WORKDIR /root/shadowsocks
 
+RUN  apk --no-cache add \
+     libsodium \
+	 wget
 
-RUN apk --no-cache add python \
-    libsodium \
-    wget
-
-
-RUN mkdir -p $WORK && \
-    wget -qO- --no-check-certificate https://github.com/shadowsocksr/shadowsocksr/archive/$BRANCH.tar.gz | tar -xzf - -C $WORK
-
-
-WORKDIR $WORK/shadowsocksr-$BRANCH/shadowsocks
-
-
-EXPOSE $SERVER_PORT
-CMD python server.py -p $SERVER_PORT -k $PASSWORD -m $METHOD -O $PROTOCOL -o $OBFS -G $PROTOCOLPARAM
+CMD envsubst < apiconfig.py > userapiconfig.py && \
+    envsubst < config.json > user-config.json  && \
+    echo -e "${DNS_1}\n${DNS_2}\n" > dns.conf  && \
+    python server.py
